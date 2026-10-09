@@ -29,6 +29,7 @@ public class RaceConditionTest {
                             .uri(URI.create(
                                     "http://localhost:8080/api/purchases/"
                                             + productId))
+                            .header("Idempotency-Key", "race-demo-002")
                             .POST(HttpRequest.BodyPublishers.noBody())
                             .build();
 
