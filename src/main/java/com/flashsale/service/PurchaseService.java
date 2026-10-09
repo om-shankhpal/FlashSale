@@ -6,6 +6,7 @@ import com.flashsale.repository.ProductRepository;
 import jakarta.persistence.EntityManager;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.flashsale.exception.OutOfStockException;
 
 @Service
 public class PurchaseService {
@@ -43,7 +44,7 @@ public class PurchaseService {
         int updatedRows = productRepository.decreaseStock(productId);
 
         if (updatedRows == 0) {
-            throw new RuntimeException(
+            throw new OutOfStockException(
                     "Product not found or out of stock");
         }
 
