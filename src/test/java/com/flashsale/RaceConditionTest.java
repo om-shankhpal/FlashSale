@@ -19,6 +19,7 @@ public class RaceConditionTest {
         CountDownLatch start = new CountDownLatch(1);
 
         for (int i = 0; i < requests; i++) {
+            final int requestNumber = i;
             executor.submit(() -> {
                 ready.countDown();
 
@@ -29,7 +30,7 @@ public class RaceConditionTest {
                             .uri(URI.create(
                                     "http://localhost:8080/api/purchases/"
                                             + productId))
-                            .header("Idempotency-Key", "race-demo-002")
+                            .header("Idempotency-Key", "race-demo-" + requestNumber)
                             .POST(HttpRequest.BodyPublishers.noBody())
                             .build();
 
