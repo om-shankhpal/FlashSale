@@ -15,10 +15,15 @@ public class PurchaseController {
         this.purchaseService = purchaseService;
     }
 
+
     @PostMapping("/{productId}")
-    public ResponseEntity<String> purchase(@PathVariable Long productId) {
+    public ResponseEntity<String> purchase(
+            @PathVariable Long productId,
+            @RequestHeader("Idempotency-Key") String idempotencyKey) {
         try {
-            return ResponseEntity.ok(purchaseService.purchase(productId));
+            return ResponseEntity.ok(
+                    purchaseService.purchase(productId, idempotencyKey)
+            );
         } catch (RuntimeException ex) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body(ex.getMessage());

@@ -30,4 +30,7 @@ public class Order {
         createdAt = LocalDateTime.now();
         status = "CONFIRMED";
     }
+
+    @Column(nullable = false, unique = true)
+    private String idempotencyKey;
 }

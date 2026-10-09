@@ -20,8 +20,15 @@ public class PurchaseService {
         this.orderRepository = orderRepository;
     }
 
+
     @Transactional
-    public String purchase(Long productId) {
+    public String purchase(Long productId, String idempotencyKey) {
+
+        // Check whether this request was already processed.
+        if (orderRepository.existsByIdempotencyKey(idempotencyKey)) {
+            return "Purchase already processed";
+        }
+
         int updatedRows = productRepository.decreaseStock(productId);
 
         if (updatedRows == 0) {
@@ -30,6 +37,7 @@ public class PurchaseService {
 
         Order order = new Order();
         order.setProductId(productId);
+        order.setIdempotencyKey(idempotencyKey);
 
         orderRepository.save(order);
 
