@@ -1,10 +1,12 @@
+
 package com.flashsale.controller;
 
+import com.flashsale.entity.Order;
+import com.flashsale.exception.OutOfStockException;
 import com.flashsale.service.PurchaseService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import com.flashsale.exception.OutOfStockException;
 
 @RestController
 @RequestMapping("/api/purchases")
@@ -16,16 +18,17 @@ public class PurchaseController {
         this.purchaseService = purchaseService;
     }
 
-
     @PostMapping("/{productId}")
-    public ResponseEntity<String> purchase(
+    public ResponseEntity<?> purchase(
             @PathVariable Long productId,
             @RequestHeader("Idempotency-Key") String idempotencyKey) {
 
         try {
-            return ResponseEntity.ok(
-                    purchaseService.purchase(productId, idempotencyKey)
-            );
+            Order order = purchaseService.purchase(
+                    productId, idempotencyKey);
+
+            return ResponseEntity.ok(order);
+
         } catch (OutOfStockException ex) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body(ex.getMessage());

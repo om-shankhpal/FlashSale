@@ -1,12 +1,14 @@
+
 package com.flashsale.service;
 
 import com.flashsale.entity.Order;
+import com.flashsale.entity.OrderStatus;
+import com.flashsale.exception.OutOfStockException;
 import com.flashsale.repository.OrderRepository;
 import com.flashsale.repository.ProductRepository;
 import jakarta.persistence.EntityManager;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.flashsale.exception.OutOfStockException;
 
 @Service
 public class PurchaseService {
@@ -24,21 +26,23 @@ public class PurchaseService {
         this.entityManager = entityManager;
     }
 
-    @Transactional
-    public String purchase(Long productId, String idempotencyKey) {
 
-        // Serialize requests that use the same idempotency key.
+    @Transactional
+    public Order purchase(Long productId, String idempotencyKey) {
+
         entityManager.createNativeQuery("""
-                SELECT pg_advisory_xact_lock(
-                    hashtextextended(:idempotencyKey, 0)
-                )
-                """)
+            SELECT pg_advisory_xact_lock(
+                hashtextextended(:idempotencyKey, 0)
+            )
+            """)
                 .setParameter("idempotencyKey", idempotencyKey)
                 .getSingleResult();
 
-        // Check again after acquiring the lock.
-        if (orderRepository.existsByIdempotencyKey(idempotencyKey)) {
-            return "Purchase already processed";
+        var existingOrder =
+                orderRepository.findByIdempotencyKey(idempotencyKey);
+
+        if (existingOrder.isPresent()) {
+            return existingOrder.get();
         }
 
         int updatedRows = productRepository.decreaseStock(productId);
@@ -51,9 +55,8 @@ public class PurchaseService {
         Order order = new Order();
         order.setProductId(productId);
         order.setIdempotencyKey(idempotencyKey);
+        order.setStatus(OrderStatus.PENDING_PAYMENT);
 
-        orderRepository.save(order);
-
-        return "Purchase successful";
+        return orderRepository.save(order);
     }
 }

@@ -1,6 +1,9 @@
+
 package com.flashsale;
 
 import com.flashsale.entity.Order;
+import com.flashsale.entity.OrderStatus;
+import com.flashsale.exception.OutOfStockException;
 import com.flashsale.repository.OrderRepository;
 import com.flashsale.repository.ProductRepository;
 import com.flashsale.service.PurchaseService;
@@ -9,7 +12,10 @@ import jakarta.persistence.Query;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.Optional;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
@@ -45,39 +51,50 @@ class PurchaseServiceTest {
 
     @Test
     void shouldCreateOrderWhenStockIsAvailable() {
-        when(orderRepository.existsByIdempotencyKey("test-key"))
-                .thenReturn(false);
+        when(orderRepository.findByIdempotencyKey("test-key"))
+                .thenReturn(Optional.empty());
         when(productRepository.decreaseStock(1L))
                 .thenReturn(1);
+        when(orderRepository.save(any(Order.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
 
-        String result = purchaseService.purchase(1L, "test-key");
+        Order result = purchaseService.purchase(1L, "test-key");
 
-        assertEquals("Purchase successful", result);
+        assertEquals(OrderStatus.PENDING_PAYMENT, result.getStatus());
+        assertEquals(1L, result.getProductId());
+        assertEquals("test-key", result.getIdempotencyKey());
+
         verify(productRepository).decreaseStock(1L);
         verify(orderRepository).save(any(Order.class));
     }
 
     @Test
-    void shouldNotDeductStockWhenKeyWasAlreadyProcessed() {
-        when(orderRepository.existsByIdempotencyKey("test-key"))
-                .thenReturn(true);
+    void shouldReturnExistingOrderWithoutDeductingStock() {
+        Order existingOrder = new Order();
+        existingOrder.setProductId(1L);
+        existingOrder.setIdempotencyKey("test-key");
+        existingOrder.setStatus(OrderStatus.PENDING_PAYMENT);
 
-        String result = purchaseService.purchase(1L, "test-key");
+        when(orderRepository.findByIdempotencyKey("test-key"))
+                .thenReturn(Optional.of(existingOrder));
 
-        assertEquals("Purchase already processed", result);
+        Order result = purchaseService.purchase(1L, "test-key");
+
+        assertEquals(existingOrder, result);
+
         verify(productRepository, never()).decreaseStock(any());
         verify(orderRepository, never()).save(any(Order.class));
     }
 
     @Test
     void shouldRejectPurchaseWhenStockIsUnavailable() {
-        when(orderRepository.existsByIdempotencyKey("out-of-stock-key"))
-                .thenReturn(false);
+        when(orderRepository.findByIdempotencyKey("out-of-stock-key"))
+                .thenReturn(Optional.empty());
         when(productRepository.decreaseStock(1L))
                 .thenReturn(0);
 
-        org.junit.jupiter.api.Assertions.assertThrows(
-                RuntimeException.class,
+        assertThrows(
+                OutOfStockException.class,
                 () -> purchaseService.purchase(1L, "out-of-stock-key")
         );
 
