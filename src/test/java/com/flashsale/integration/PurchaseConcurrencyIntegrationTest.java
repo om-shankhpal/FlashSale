@@ -109,4 +109,46 @@ class PurchaseConcurrencyIntegrationTest {
             executor.shutdownNow();
         }
     }
+
+
+    @Test
+    void shouldCreateOnlyOneOrderForConcurrentRequestsWithSameIdempotencyKey()
+            throws Exception {
+
+        int concurrentRequests = 20;
+        String sharedIdempotencyKey = "same-key-concurrent-test";
+
+        ExecutorService executor = Executors.newFixedThreadPool(concurrentRequests);
+
+        try {
+            List<Callable<Long>> tasks = new ArrayList<>();
+
+            for (int i = 0; i < concurrentRequests; i++) {
+                tasks.add(() -> {
+                    Order order = purchaseService.purchase(
+                            productId,
+                            sharedIdempotencyKey
+                    );
+                    return order.getId();
+                });
+            }
+
+            List<Future<Long>> results = executor.invokeAll(tasks);
+
+            Long expectedOrderId = results.get(0).get();
+
+            for (Future<Long> result : results) {
+                assertEquals(expectedOrderId, result.get());
+            }
+
+            Product finalProduct = productRepository.findById(productId)
+                    .orElseThrow();
+
+            assertEquals(4, finalProduct.getStock());
+            assertEquals(1, orderRepository.count());
+
+        } finally {
+            executor.shutdownNow();
+        }
+    }
 }
