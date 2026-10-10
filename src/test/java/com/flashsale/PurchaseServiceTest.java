@@ -4,6 +4,7 @@ import com.flashsale.entity.Order;
 import com.flashsale.entity.OrderStatus;
 import com.flashsale.entity.Product;
 import com.flashsale.exception.OutOfStockException;
+import com.flashsale.exception.SaleNotActiveException;
 import com.flashsale.repository.OrderRepository;
 import com.flashsale.repository.ProductRepository;
 import com.flashsale.service.PurchaseService;
@@ -112,6 +113,54 @@ class PurchaseServiceTest {
 
         verify(productRepository).findById(1L);
         verify(productRepository).decreaseStock(1L);
+        verify(orderRepository, never()).save(any(Order.class));
+    }
+
+
+    @Test
+    void shouldRejectPurchaseBeforeSaleStarts() {
+        Product product = new Product();
+        product.setId(1L);
+        product.setName("Test Product");
+        product.setStock(10);
+        product.setSaleStartsAt(LocalDateTime.now().plusHours(1));
+        product.setSaleEndsAt(LocalDateTime.now().plusHours(2));
+
+        when(orderRepository.findByIdempotencyKey("early-key"))
+                .thenReturn(Optional.empty());
+        when(productRepository.findById(1L))
+                .thenReturn(Optional.of(product));
+
+        assertThrows(
+                SaleNotActiveException.class,
+                () -> purchaseService.purchase(1L, "early-key")
+        );
+
+        verify(productRepository, never()).decreaseStock(any());
+        verify(orderRepository, never()).save(any(Order.class));
+    }
+
+
+    @Test
+    void shouldRejectPurchaseAfterSaleEnds() {
+        Product product = new Product();
+        product.setId(1L);
+        product.setName("Test Product");
+        product.setStock(10);
+        product.setSaleStartsAt(LocalDateTime.now().minusHours(2));
+        product.setSaleEndsAt(LocalDateTime.now().minusHours(1));
+
+        when(orderRepository.findByIdempotencyKey("late-key"))
+                .thenReturn(Optional.empty());
+        when(productRepository.findById(1L))
+                .thenReturn(Optional.of(product));
+
+        assertThrows(
+                SaleNotActiveException.class,
+                () -> purchaseService.purchase(1L, "late-key")
+        );
+
+        verify(productRepository, never()).decreaseStock(any());
         verify(orderRepository, never()).save(any(Order.class));
     }
 }
