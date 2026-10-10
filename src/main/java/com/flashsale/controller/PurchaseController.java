@@ -3,6 +3,7 @@ package com.flashsale.controller;
 
 import com.flashsale.entity.Order;
 import com.flashsale.exception.OutOfStockException;
+import com.flashsale.exception.SaleNotActiveException;
 import com.flashsale.service.PurchaseService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -29,7 +30,7 @@ public class PurchaseController {
 
             return ResponseEntity.ok(order);
 
-        } catch (OutOfStockException ex) {
+        } catch (OutOfStockException | SaleNotActiveException ex) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body(ex.getMessage());
         }

@@ -1,14 +1,17 @@
-
 package com.flashsale.service;
 
 import com.flashsale.entity.Order;
 import com.flashsale.entity.OrderStatus;
+import com.flashsale.entity.Product;
 import com.flashsale.exception.OutOfStockException;
+import com.flashsale.exception.SaleNotActiveException;
 import com.flashsale.repository.OrderRepository;
 import com.flashsale.repository.ProductRepository;
 import jakarta.persistence.EntityManager;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
 
 @Service
 public class PurchaseService {
@@ -26,15 +29,14 @@ public class PurchaseService {
         this.entityManager = entityManager;
     }
 
-
     @Transactional
     public Order purchase(Long productId, String idempotencyKey) {
 
         entityManager.createNativeQuery("""
-            SELECT pg_advisory_xact_lock(
-                hashtextextended(:idempotencyKey, 0)
-            )
-            """)
+                SELECT pg_advisory_xact_lock(
+                    hashtextextended(:idempotencyKey, 0)
+                )
+                """)
                 .setParameter("idempotencyKey", idempotencyKey)
                 .getSingleResult();
 
@@ -45,11 +47,23 @@ public class PurchaseService {
             return existingOrder.get();
         }
 
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() ->
+                        new OutOfStockException("Product not found"));
+
+        LocalDateTime now = LocalDateTime.now();
+
+        if (now.isBefore(product.getSaleStartsAt())
+                || !now.isBefore(product.getSaleEndsAt())) {
+            throw new SaleNotActiveException(
+                    "The sale is not currently active");
+        }
+
         int updatedRows = productRepository.decreaseStock(productId);
 
         if (updatedRows == 0) {
             throw new OutOfStockException(
-                    "Product not found or out of stock");
+                    "Product is out of stock");
         }
 
         Order order = new Order();

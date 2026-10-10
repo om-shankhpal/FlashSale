@@ -1,8 +1,8 @@
-
 package com.flashsale;
 
 import com.flashsale.entity.Order;
 import com.flashsale.entity.OrderStatus;
+import com.flashsale.entity.Product;
 import com.flashsale.exception.OutOfStockException;
 import com.flashsale.repository.OrderRepository;
 import com.flashsale.repository.ProductRepository;
@@ -12,6 +12,7 @@ import jakarta.persistence.Query;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -41,6 +42,16 @@ class PurchaseServiceTest {
                 .thenReturn(lockQuery);
         when(lockQuery.getSingleResult())
                 .thenReturn(null);
+
+        Product product = new Product();
+        product.setId(1L);
+        product.setName("Test Product");
+        product.setStock(10);
+        product.setSaleStartsAt(LocalDateTime.now().minusMinutes(5));
+        product.setSaleEndsAt(LocalDateTime.now().plusHours(1));
+
+        when(productRepository.findById(1L))
+                .thenReturn(Optional.of(product));
 
         purchaseService = new PurchaseService(
                 productRepository,
@@ -82,6 +93,7 @@ class PurchaseServiceTest {
 
         assertEquals(existingOrder, result);
 
+        verify(productRepository, never()).findById(any());
         verify(productRepository, never()).decreaseStock(any());
         verify(orderRepository, never()).save(any(Order.class));
     }
@@ -98,6 +110,7 @@ class PurchaseServiceTest {
                 () -> purchaseService.purchase(1L, "out-of-stock-key")
         );
 
+        verify(productRepository).findById(1L);
         verify(productRepository).decreaseStock(1L);
         verify(orderRepository, never()).save(any(Order.class));
     }

@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "products")
@@ -28,4 +29,10 @@ public class Product {
 
     @Version
     private Long version;
+
+    @Column(nullable = false)
+    private LocalDateTime saleStartsAt;
+
+    @Column(nullable = false)
+    private LocalDateTime saleEndsAt;
 }
