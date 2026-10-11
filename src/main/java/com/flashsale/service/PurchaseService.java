@@ -70,6 +70,9 @@ public class PurchaseService {
         order.setProductId(productId);
         order.setIdempotencyKey(idempotencyKey);
         order.setStatus(OrderStatus.PENDING_PAYMENT);
+        order.setReservationExpiresAt(
+                LocalDateTime.now().plusMinutes(5)
+        );
 
         return orderRepository.save(order);
     }

@@ -18,6 +18,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
@@ -162,5 +163,33 @@ class PurchaseServiceTest {
 
         verify(productRepository, never()).decreaseStock(any());
         verify(orderRepository, never()).save(any(Order.class));
+    }
+
+    @Test
+    void shouldSetReservationExpiryFiveMinutesAhead() {
+        when(orderRepository.findByIdempotencyKey("expiry-key"))
+                .thenReturn(Optional.empty());
+
+        when(productRepository.decreaseStock(1L))
+                .thenReturn(1);
+
+        when(orderRepository.save(any(Order.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        LocalDateTime beforePurchase = LocalDateTime.now();
+
+        Order result = purchaseService.purchase(1L, "expiry-key");
+
+        LocalDateTime afterPurchase = LocalDateTime.now();
+
+        assertNotNull(result.getReservationExpiresAt());
+
+        assertEquals(
+                true,
+                !result.getReservationExpiresAt()
+                        .isBefore(beforePurchase.plusMinutes(5))
+                        && !result.getReservationExpiresAt()
+                        .isAfter(afterPurchase.plusMinutes(5))
+        );
     }
 }
