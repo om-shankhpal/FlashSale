@@ -17,4 +17,13 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
           AND p.stock > 0
         """)
     int decreaseStock(@Param("productId") Long productId);
+
+    @Modifying
+    @Query("""
+        UPDATE Product p
+        SET p.stock = p.stock + 1,
+            p.version = p.version + 1
+        WHERE p.id = :productId
+    """)
+    int increaseStock(@Param("productId") Long productId);
 }
