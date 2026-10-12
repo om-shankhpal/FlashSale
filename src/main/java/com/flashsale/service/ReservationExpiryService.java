@@ -7,6 +7,7 @@ import com.flashsale.repository.ProductRepository;
 import jakarta.persistence.EntityManager;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.scheduling.annotation.Scheduled;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -56,5 +57,9 @@ public class ReservationExpiryService {
         }
 
         return expiredCount;
+    }
+    @Scheduled(fixedDelayString = "${flashsale.reservation.expiry-interval-ms:10000}")
+    public void scheduledExpiry() {
+        expireReservations();
     }
 }
