@@ -1,10 +1,18 @@
+
 -- KEYS[1] = stock key
 -- KEYS[2] = reservation key
--- ARGV[1] = reservation ID
+-- ARGV[1] = product ID
+-- ARGV[2] = reservation ID
 
--- A repeated reservation must not decrement stock again.
-if redis.call('EXISTS', KEYS[2]) == 1 then
-    return 2
+-- If this reservation exists, verify it belongs to this product.
+local existingProduct = redis.call('GET', KEYS[2])
+
+if existingProduct then
+    if existingProduct == ARGV[1] then
+        return 2
+    else
+        return -2
+    end
 end
 
 local stock = tonumber(redis.call('GET', KEYS[1]))

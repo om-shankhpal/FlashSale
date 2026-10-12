@@ -67,4 +67,18 @@ class RedisStockReservationServiceTest {
                 () -> reservationService.reserveStock(1L, "reservation-3")
         );
     }
+
+    @Test
+    void shouldThrowWhenReservationIdBelongsToAnotherProduct() {
+        when(redisTemplate.execute(
+                any(DefaultRedisScript.class),
+                anyList(),
+                any(Object[].class)
+        )).thenReturn(-2L);
+
+        assertThrows(
+                IllegalStateException.class,
+                () -> reservationService.reserveStock(1L, "reservation-1")
+        );
+    }
 }

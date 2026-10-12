@@ -30,6 +30,18 @@ public class RedisStockReservationService {
     }
 
     public boolean reserveStock(Long productId, String reservationId) {
+        if (productId == null || productId <= 0) {
+            throw new IllegalArgumentException(
+                    "Product ID must be positive"
+            );
+        }
+
+        if (reservationId == null || reservationId.isBlank()) {
+            throw new IllegalArgumentException(
+                    "Reservation ID must not be blank"
+            );
+        }
+
         String stockKey = STOCK_KEY_PREFIX + productId;
         String reservationKey =
                 RESERVATION_KEY_PREFIX + reservationId;
@@ -37,6 +49,7 @@ public class RedisStockReservationService {
         Long result = redisTemplate.execute(
                 reserveStockScript,
                 List.of(stockKey, reservationKey),
+                productId.toString(),
                 reservationId
         );
 
@@ -47,12 +60,14 @@ public class RedisStockReservationService {
         }
 
         return switch (result.intValue()) {
-            case 1 -> true;
-            case 2 -> true; // This reservation already exists.
+            case 1, 2 -> true;
             case 0 -> false;
             case -1 -> throw new IllegalStateException(
                     "Redis stock has not been initialized for product "
                             + productId
+            );
+            case -2 -> throw new IllegalStateException(
+                    "Reservation ID is already associated with another product"
             );
             default -> throw new IllegalStateException(
                     "Unexpected Redis reservation result: " + result
