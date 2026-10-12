@@ -207,13 +207,13 @@
       return;
     }
 
-    const payload = {
-      name: String(data.get("name")).trim(),
-      price: Number(data.get("price")),
-      stock: Number(data.get("stock")),
-      saleStartsAt,
-      saleEndsAt
-    };
+   const payload = {
+     name: String(data.get("name")).trim(),
+     price: Number(data.get("price")),
+     stock: Number(data.get("stock")),
+     saleStartsAt: new Date(saleStartsAt).toISOString(),
+     saleEndsAt: new Date(saleEndsAt).toISOString()
+   };
 
     createButton.disabled = true;
     setMessage("Creating sale...");
