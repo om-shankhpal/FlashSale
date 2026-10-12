@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.flashsale.entity.Order;
 import com.flashsale.exception.OutOfStockException;
 import org.junit.jupiter.api.Test;
+import com.flashsale.service.ReservationExpiryService;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -40,6 +41,9 @@ class PurchaseConcurrencyIntegrationTest {
 
     @Autowired
     private PurchaseService purchaseService;
+
+    @Autowired
+    private ReservationExpiryService reservationExpiryService;
 
     private Long productId;
 
@@ -150,5 +154,41 @@ class PurchaseConcurrencyIntegrationTest {
         } finally {
             executor.shutdownNow();
         }
+    }
+
+    @Test
+    void shouldExpireOrderAndRestoreStockExactlyOnce() {
+        Product product = productRepository.findById(productId)
+                .orElseThrow();
+
+        Order order = new Order();
+        order.setProductId(productId);
+        order.setIdempotencyKey("expiry-integration-key");
+        order.setStatus(com.flashsale.entity.OrderStatus.PENDING_PAYMENT);
+        order.setReservationExpiresAt(LocalDateTime.now().minusMinutes(1));
+
+        orderRepository.saveAndFlush(order);
+
+        int firstRun = reservationExpiryService.expireReservations();
+
+        Product afterFirstRun = productRepository.findById(productId)
+                .orElseThrow();
+        Order expiredOrder = orderRepository.findById(order.getId())
+                .orElseThrow();
+
+        assertEquals(1, firstRun);
+        assertEquals(6, afterFirstRun.getStock());
+        assertEquals(
+                com.flashsale.entity.OrderStatus.EXPIRED,
+                expiredOrder.getStatus()
+        );
+
+        int secondRun = reservationExpiryService.expireReservations();
+
+        Product afterSecondRun = productRepository.findById(productId)
+                .orElseThrow();
+
+        assertEquals(0, secondRun);
+        assertEquals(6, afterSecondRun.getStock());
     }
 }
