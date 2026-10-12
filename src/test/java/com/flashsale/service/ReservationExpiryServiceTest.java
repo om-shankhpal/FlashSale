@@ -1,3 +1,4 @@
+
 package com.flashsale.service;
 
 import com.flashsale.entity.Order;
@@ -9,7 +10,8 @@ import jakarta.persistence.Query;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -34,6 +36,7 @@ class ReservationExpiryServiceTest {
 
         when(entityManager.createNativeQuery(anyString()))
                 .thenReturn(updateQuery);
+
         when(updateQuery.setParameter(anyString(), any()))
                 .thenReturn(updateQuery);
 
@@ -50,11 +53,14 @@ class ReservationExpiryServiceTest {
         order.setId(1L);
         order.setProductId(10L);
         order.setStatus(OrderStatus.PENDING_PAYMENT);
-        order.setReservationExpiresAt(LocalDateTime.now().minusMinutes(1));
+        order.setReservationExpiresAt(
+                Instant.now().minus(1, ChronoUnit.MINUTES)
+        );
 
         when(orderRepository.findExpiredOrders(
-                eq(OrderStatus.PENDING_PAYMENT), any(LocalDateTime.class)))
-                .thenReturn(List.of(order));
+                eq(OrderStatus.PENDING_PAYMENT),
+                any(Instant.class)
+        )).thenReturn(List.of(order));
 
         when(updateQuery.executeUpdate()).thenReturn(1);
         when(productRepository.increaseStock(10L)).thenReturn(1);
@@ -71,11 +77,14 @@ class ReservationExpiryServiceTest {
         order.setId(1L);
         order.setProductId(10L);
         order.setStatus(OrderStatus.PENDING_PAYMENT);
-        order.setReservationExpiresAt(LocalDateTime.now().minusMinutes(1));
+        order.setReservationExpiresAt(
+                Instant.now().minus(1, ChronoUnit.MINUTES)
+        );
 
         when(orderRepository.findExpiredOrders(
-                eq(OrderStatus.PENDING_PAYMENT), any(LocalDateTime.class)))
-                .thenReturn(List.of(order));
+                eq(OrderStatus.PENDING_PAYMENT),
+                any(Instant.class)
+        )).thenReturn(List.of(order));
 
         when(updateQuery.executeUpdate()).thenReturn(0);
 
@@ -88,8 +97,9 @@ class ReservationExpiryServiceTest {
     @Test
     void shouldDoNothingWhenNoOrdersHaveExpired() {
         when(orderRepository.findExpiredOrders(
-                eq(OrderStatus.PENDING_PAYMENT), any(LocalDateTime.class)))
-                .thenReturn(List.of());
+                eq(OrderStatus.PENDING_PAYMENT),
+                any(Instant.class)
+        )).thenReturn(List.of());
 
         int result = service.expireReservations();
 

@@ -6,7 +6,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Entity
 @Table(name = "products")
@@ -31,8 +31,8 @@ public class Product {
     private Long version;
 
     @Column(nullable = false)
-    private LocalDateTime saleStartsAt;
+    private Instant saleStartsAt;
 
     @Column(nullable = false)
-    private LocalDateTime saleEndsAt;
+    private Instant saleEndsAt;
 }

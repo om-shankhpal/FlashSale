@@ -12,7 +12,8 @@ import jakarta.persistence.EntityManager;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 
 @Service
 public class PurchaseService {
@@ -52,7 +53,7 @@ public class PurchaseService {
                 .orElseThrow(() ->
                         new OutOfStockException("Product not found"));
 
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
 
         if (now.isBefore(product.getSaleStartsAt())
                 || !now.isBefore(product.getSaleEndsAt())) {
@@ -71,7 +72,7 @@ public class PurchaseService {
         order.setProductId(productId);
         order.setIdempotencyKey(idempotencyKey);
         order.setStatus(OrderStatus.PENDING_PAYMENT);
-        order.setReservationExpiresAt(now.plusMinutes(5));
+        order.setReservationExpiresAt(now.plus(5, ChronoUnit.MINUTES));
 
         return orderRepository.save(order);
     }

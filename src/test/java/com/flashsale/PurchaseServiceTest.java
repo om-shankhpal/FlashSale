@@ -9,12 +9,15 @@ import com.flashsale.exception.SaleNotActiveException;
 import com.flashsale.repository.OrderRepository;
 import com.flashsale.repository.ProductRepository;
 import com.flashsale.service.PurchaseService;
+
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -41,8 +44,10 @@ class PurchaseServiceTest {
 
         when(entityManager.createNativeQuery(anyString()))
                 .thenReturn(lockQuery);
+
         when(lockQuery.setParameter(anyString(), any()))
                 .thenReturn(lockQuery);
+
         when(lockQuery.getSingleResult())
                 .thenReturn(null);
 
@@ -50,8 +55,12 @@ class PurchaseServiceTest {
         product.setId(1L);
         product.setName("Test Product");
         product.setStock(10);
-        product.setSaleStartsAt(LocalDateTime.now().minusMinutes(5));
-        product.setSaleEndsAt(LocalDateTime.now().plusHours(1));
+        product.setSaleStartsAt(
+                Instant.now().minus(5, ChronoUnit.MINUTES)
+        );
+        product.setSaleEndsAt(
+                Instant.now().plus(1, ChronoUnit.HOURS)
+        );
 
         when(productRepository.findById(1L))
                 .thenReturn(Optional.of(product));
@@ -67,8 +76,10 @@ class PurchaseServiceTest {
     void shouldCreateOrderWhenStockIsAvailable() {
         when(orderRepository.findByIdempotencyKey("test-key"))
                 .thenReturn(Optional.empty());
+
         when(productRepository.decreaseStock(1L))
                 .thenReturn(1);
+
         when(orderRepository.save(any(Order.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -105,6 +116,7 @@ class PurchaseServiceTest {
     void shouldRejectPurchaseWhenStockIsUnavailable() {
         when(orderRepository.findByIdempotencyKey("out-of-stock-key"))
                 .thenReturn(Optional.empty());
+
         when(productRepository.decreaseStock(1L))
                 .thenReturn(0);
 
@@ -124,11 +136,16 @@ class PurchaseServiceTest {
         product.setId(1L);
         product.setName("Test Product");
         product.setStock(10);
-        product.setSaleStartsAt(LocalDateTime.now().plusHours(1));
-        product.setSaleEndsAt(LocalDateTime.now().plusHours(2));
+        product.setSaleStartsAt(
+                Instant.now().plus(1, ChronoUnit.HOURS)
+        );
+        product.setSaleEndsAt(
+                Instant.now().plus(2, ChronoUnit.HOURS)
+        );
 
         when(orderRepository.findByIdempotencyKey("early-key"))
                 .thenReturn(Optional.empty());
+
         when(productRepository.findById(1L))
                 .thenReturn(Optional.of(product));
 
@@ -147,11 +164,16 @@ class PurchaseServiceTest {
         product.setId(1L);
         product.setName("Test Product");
         product.setStock(10);
-        product.setSaleStartsAt(LocalDateTime.now().minusHours(2));
-        product.setSaleEndsAt(LocalDateTime.now().minusHours(1));
+        product.setSaleStartsAt(
+                Instant.now().minus(2, ChronoUnit.HOURS)
+        );
+        product.setSaleEndsAt(
+                Instant.now().minus(1, ChronoUnit.HOURS)
+        );
 
         when(orderRepository.findByIdempotencyKey("late-key"))
                 .thenReturn(Optional.empty());
+
         when(productRepository.findById(1L))
                 .thenReturn(Optional.of(product));
 
@@ -168,24 +190,27 @@ class PurchaseServiceTest {
     void shouldSetReservationExpiryFiveMinutesAhead() {
         when(orderRepository.findByIdempotencyKey("expiry-key"))
                 .thenReturn(Optional.empty());
+
         when(productRepository.decreaseStock(1L))
                 .thenReturn(1);
+
         when(orderRepository.save(any(Order.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
-        LocalDateTime beforePurchase = LocalDateTime.now();
+        Instant beforePurchase = Instant.now();
 
         Order result = purchaseService.purchase(1L, "expiry-key");
 
-        LocalDateTime afterPurchase = LocalDateTime.now();
+        Instant afterPurchase = Instant.now();
 
         assertNotNull(result.getReservationExpiresAt());
+
         assertEquals(
                 true,
                 !result.getReservationExpiresAt()
-                        .isBefore(beforePurchase.plusMinutes(5))
+                        .isBefore(beforePurchase.plus(5, ChronoUnit.MINUTES))
                         && !result.getReservationExpiresAt()
-                        .isAfter(afterPurchase.plusMinutes(5))
+                        .isAfter(afterPurchase.plus(5, ChronoUnit.MINUTES))
         );
     }
 }

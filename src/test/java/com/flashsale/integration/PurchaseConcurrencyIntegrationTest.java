@@ -1,21 +1,27 @@
+
 package com.flashsale.integration;
 
+import com.flashsale.entity.Order;
 import com.flashsale.entity.Product;
+import com.flashsale.exception.OutOfStockException;
+import com.flashsale.redis.RedisStockInitializationService;
 import com.flashsale.repository.OrderRepository;
 import com.flashsale.repository.ProductRepository;
 import com.flashsale.service.PurchaseService;
+import com.flashsale.service.ReservationExpiryService;
+
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
-import org.springframework.transaction.annotation.Transactional;
-import com.flashsale.entity.Order;
-import com.flashsale.exception.OutOfStockException;
-import org.junit.jupiter.api.Test;
-import com.flashsale.service.ReservationExpiryService;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -25,17 +31,12 @@ import java.util.concurrent.Future;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import com.flashsale.redis.RedisStockInitializationService;
-
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
 
 @SpringBootTest
 @ActiveProfiles("test")
 @TestPropertySource(locations = "classpath:application-test.properties")
-
 class PurchaseConcurrencyIntegrationTest {
+
     @MockitoBean
     private RedisStockInitializationService redisStockInitializationService;
 
@@ -54,20 +55,24 @@ class PurchaseConcurrencyIntegrationTest {
     private Long productId;
 
     @BeforeEach
-//    @Transactional
     void setUp() {
         orderRepository.deleteAll();
         productRepository.deleteAll();
 
-        Product product = new Product();
         Mockito.when(
                 redisStockInitializationService.isStockAvailable(Mockito.anyLong())
         ).thenReturn(true);
+
+        Product product = new Product();
         product.setName("Concurrency Test Product");
         product.setStock(5);
         product.setPrice(new BigDecimal("100.00"));
-        product.setSaleStartsAt(LocalDateTime.now().minusMinutes(5));
-        product.setSaleEndsAt(LocalDateTime.now().plusHours(1));
+        product.setSaleStartsAt(
+                Instant.now().minus(5, ChronoUnit.MINUTES)
+        );
+        product.setSaleEndsAt(
+                Instant.now().plus(1, ChronoUnit.HOURS)
+        );
 
         productId = productRepository.saveAndFlush(product).getId();
     }
@@ -77,7 +82,8 @@ class PurchaseConcurrencyIntegrationTest {
         int concurrentRequests = 20;
         int initialStock = 5;
 
-        ExecutorService executor = Executors.newFixedThreadPool(concurrentRequests);
+        ExecutorService executor =
+                Executors.newFixedThreadPool(concurrentRequests);
 
         try {
             List<Callable<Boolean>> tasks = new ArrayList<>();
@@ -123,7 +129,6 @@ class PurchaseConcurrencyIntegrationTest {
         }
     }
 
-
     @Test
     void shouldCreateOnlyOneOrderForConcurrentRequestsWithSameIdempotencyKey()
             throws Exception {
@@ -131,7 +136,8 @@ class PurchaseConcurrencyIntegrationTest {
         int concurrentRequests = 20;
         String sharedIdempotencyKey = "same-key-concurrent-test";
 
-        ExecutorService executor = Executors.newFixedThreadPool(concurrentRequests);
+        ExecutorService executor =
+                Executors.newFixedThreadPool(concurrentRequests);
 
         try {
             List<Callable<Long>> tasks = new ArrayList<>();
@@ -173,8 +179,12 @@ class PurchaseConcurrencyIntegrationTest {
         Order order = new Order();
         order.setProductId(productId);
         order.setIdempotencyKey("expiry-integration-key");
-        order.setStatus(com.flashsale.entity.OrderStatus.PENDING_PAYMENT);
-        order.setReservationExpiresAt(LocalDateTime.now().minusMinutes(1));
+        order.setStatus(
+                com.flashsale.entity.OrderStatus.PENDING_PAYMENT
+        );
+        order.setReservationExpiresAt(
+                Instant.now().minus(1, ChronoUnit.MINUTES)
+        );
 
         orderRepository.saveAndFlush(order);
 
@@ -182,6 +192,7 @@ class PurchaseConcurrencyIntegrationTest {
 
         Product afterFirstRun = productRepository.findById(productId)
                 .orElseThrow();
+
         Order expiredOrder = orderRepository.findById(order.getId())
                 .orElseThrow();
 

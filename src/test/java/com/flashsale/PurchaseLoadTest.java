@@ -1,3 +1,4 @@
+
 package com.flashsale;
 
 import com.flashsale.entity.Order;
@@ -5,12 +6,15 @@ import com.flashsale.entity.Product;
 import com.flashsale.repository.OrderRepository;
 import com.flashsale.repository.ProductRepository;
 import com.flashsale.service.PurchaseService;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
-import java.time.LocalDateTime;
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -38,9 +42,13 @@ class PurchaseLoadTest {
         Product product = new Product();
         product.setName("Load Test Product");
         product.setStock(initialStock);
-        product.setPrice(new java.math.BigDecimal("10.00"));
-        product.setSaleStartsAt(LocalDateTime.now().minusMinutes(1));
-        product.setSaleEndsAt(LocalDateTime.now().plusHours(1));
+        product.setPrice(new BigDecimal("10.00"));
+        product.setSaleStartsAt(
+                Instant.now().minus(1, ChronoUnit.MINUTES)
+        );
+        product.setSaleEndsAt(
+                Instant.now().plus(1, ChronoUnit.HOURS)
+        );
 
         product = productRepository.saveAndFlush(product);
         Long productId = product.getId();
@@ -72,6 +80,7 @@ class PurchaseLoadTest {
                         );
 
                         successful.incrementAndGet();
+
                     } catch (Exception exception) {
                         rejected.incrementAndGet();
                     }
@@ -84,14 +93,14 @@ class PurchaseLoadTest {
             for (Future<?> future : futures) {
                 future.get(2, TimeUnit.MINUTES);
             }
+
         } finally {
             executor.shutdownNow();
         }
 
-        long durationMillis =
-                TimeUnit.NANOSECONDS.toMillis(
-                        System.nanoTime() - startedAt
-                );
+        long durationMillis = TimeUnit.NANOSECONDS.toMillis(
+                System.nanoTime() - startedAt
+        );
 
         Product updatedProduct = productRepository.findById(productId)
                 .orElseThrow();

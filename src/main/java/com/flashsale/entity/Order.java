@@ -5,7 +5,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Entity
 @Table(
@@ -29,10 +29,10 @@ public class Order {
     private Long productId;
 
     @Column(nullable = false)
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
     @Column
-    private LocalDateTime reservationExpiresAt;
+    private Instant reservationExpiresAt;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -46,7 +46,7 @@ public class Order {
 
     @PrePersist
     protected void onCreate() {
-        createdAt = LocalDateTime.now();
+        createdAt = Instant.now();
 
         if (status == null) {
             status = OrderStatus.PENDING_PAYMENT;

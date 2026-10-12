@@ -1,3 +1,4 @@
+
 package com.flashsale.service;
 
 import com.flashsale.entity.Order;
@@ -5,11 +6,11 @@ import com.flashsale.entity.OrderStatus;
 import com.flashsale.repository.OrderRepository;
 import com.flashsale.repository.ProductRepository;
 import jakarta.persistence.EntityManager;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.scheduling.annotation.Scheduled;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 @Service
@@ -30,7 +31,7 @@ public class ReservationExpiryService {
 
     @Transactional
     public int expireReservations() {
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
 
         List<Order> expiredOrders = orderRepository.findExpiredOrders(
                 OrderStatus.PENDING_PAYMENT, now);
@@ -58,6 +59,7 @@ public class ReservationExpiryService {
 
         return expiredCount;
     }
+
     @Scheduled(fixedDelayString = "${flashsale.reservation.expiry-interval-ms:10000}")
     public void scheduledExpiry() {
         expireReservations();
