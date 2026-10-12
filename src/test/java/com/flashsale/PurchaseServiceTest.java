@@ -12,6 +12,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import com.flashsale.redis.RedisStockReservationService;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -30,6 +31,7 @@ class PurchaseServiceTest {
     private EntityManager entityManager;
     private Query lockQuery;
     private PurchaseService purchaseService;
+    private RedisStockReservationService redisStockReservationService;
 
     @BeforeEach
     void setUp() {
@@ -37,6 +39,7 @@ class PurchaseServiceTest {
         orderRepository = mock(OrderRepository.class);
         entityManager = mock(EntityManager.class);
         lockQuery = mock(Query.class);
+        redisStockReservationService = mock(RedisStockReservationService.class);
 
         when(entityManager.createNativeQuery(anyString()))
                 .thenReturn(lockQuery);
@@ -58,7 +61,8 @@ class PurchaseServiceTest {
         purchaseService = new PurchaseService(
                 productRepository,
                 orderRepository,
-                entityManager
+                entityManager,
+                redisStockReservationService
         );
     }
 
