@@ -12,7 +12,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import com.flashsale.redis.RedisStockReservationService;
+import com.flashsale.redis.RedisStockInitializationService;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -31,7 +31,7 @@ class PurchaseServiceTest {
     private EntityManager entityManager;
     private Query lockQuery;
     private PurchaseService purchaseService;
-    private RedisStockReservationService redisStockReservationService;
+    private RedisStockInitializationService redisStockInitializationService;
 
     @BeforeEach
     void setUp() {
@@ -39,8 +39,11 @@ class PurchaseServiceTest {
         orderRepository = mock(OrderRepository.class);
         entityManager = mock(EntityManager.class);
         lockQuery = mock(Query.class);
-        redisStockReservationService = mock(RedisStockReservationService.class);
+        redisStockInitializationService =
+                mock(RedisStockInitializationService.class);
 
+        when(redisStockInitializationService.isStockAvailable(1L))
+                .thenReturn(true);
         when(entityManager.createNativeQuery(anyString()))
                 .thenReturn(lockQuery);
         when(lockQuery.setParameter(anyString(), any()))
@@ -62,7 +65,7 @@ class PurchaseServiceTest {
                 productRepository,
                 orderRepository,
                 entityManager,
-                redisStockReservationService
+                redisStockInitializationService
         );
     }
 
@@ -195,5 +198,22 @@ class PurchaseServiceTest {
                         && !result.getReservationExpiresAt()
                         .isAfter(afterPurchase.plusMinutes(5))
         );
+    }
+
+    @Test
+    void shouldRejectPurchaseWhenRedisReportsNoStock() {
+        when(orderRepository.findByIdempotencyKey("redis-out-key"))
+                .thenReturn(Optional.empty());
+
+        when(redisStockInitializationService.isStockAvailable(1L))
+                .thenReturn(false);
+
+        assertThrows(
+                OutOfStockException.class,
+                () -> purchaseService.purchase(1L, "redis-out-key")
+        );
+
+        verify(productRepository, never()).decreaseStock(any());
+        verify(orderRepository, never()).save(any(Order.class));
     }
 }

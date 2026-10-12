@@ -5,6 +5,7 @@ import com.flashsale.repository.OrderRepository;
 import com.flashsale.repository.ProductRepository;
 import com.flashsale.service.PurchaseService;
 import org.junit.jupiter.api.BeforeEach;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
@@ -24,6 +25,8 @@ import java.util.concurrent.Future;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import com.flashsale.redis.RedisStockInitializationService;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -31,7 +34,10 @@ import java.time.LocalDateTime;
 @SpringBootTest
 @ActiveProfiles("test")
 @TestPropertySource(locations = "classpath:application-test.properties")
+
 class PurchaseConcurrencyIntegrationTest {
+    @MockitoBean
+    private RedisStockInitializationService redisStockInitializationService;
 
     @Autowired
     private ProductRepository productRepository;
@@ -54,6 +60,9 @@ class PurchaseConcurrencyIntegrationTest {
         productRepository.deleteAll();
 
         Product product = new Product();
+        Mockito.when(
+                redisStockInitializationService.isStockAvailable(Mockito.anyLong())
+        ).thenReturn(true);
         product.setName("Concurrency Test Product");
         product.setStock(5);
         product.setPrice(new BigDecimal("100.00"));
