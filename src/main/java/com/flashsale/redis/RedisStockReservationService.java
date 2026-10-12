@@ -1,3 +1,4 @@
+
 package com.flashsale.redis;
 
 import org.springframework.core.io.ClassPathResource;
@@ -11,6 +12,8 @@ import java.util.List;
 public class RedisStockReservationService {
 
     private static final String STOCK_KEY_PREFIX = "flashsale:stock:";
+    private static final String RESERVATION_KEY_PREFIX =
+            "flashsale:reservation:";
 
     private final StringRedisTemplate redisTemplate;
     private final DefaultRedisScript<Long> reserveStockScript;
@@ -21,17 +24,20 @@ public class RedisStockReservationService {
 
         this.reserveStockScript = new DefaultRedisScript<>();
         this.reserveStockScript.setLocation(
-                new ClassPathResource("scripts/reserve-stock.lua")
+                new ClassPathResource("scripts/reserve-stock-with-id.lua")
         );
         this.reserveStockScript.setResultType(Long.class);
     }
 
-    public boolean reserveStock(Long productId) {
+    public boolean reserveStock(Long productId, String reservationId) {
         String stockKey = STOCK_KEY_PREFIX + productId;
+        String reservationKey =
+                RESERVATION_KEY_PREFIX + reservationId;
 
         Long result = redisTemplate.execute(
                 reserveStockScript,
-                List.of(stockKey)
+                List.of(stockKey, reservationKey),
+                reservationId
         );
 
         if (result == null) {
@@ -42,20 +48,15 @@ public class RedisStockReservationService {
 
         return switch (result.intValue()) {
             case 1 -> true;
+            case 2 -> true; // This reservation already exists.
             case 0 -> false;
             case -1 -> throw new IllegalStateException(
                     "Redis stock has not been initialized for product "
                             + productId
             );
             default -> throw new IllegalStateException(
-                    "Unexpected stock reservation result: " + result
+                    "Unexpected Redis reservation result: " + result
             );
         };
-    }
-
-    public void restoreStock(Long productId) {
-        String stockKey = STOCK_KEY_PREFIX + productId;
-
-        redisTemplate.opsForValue().increment(stockKey);
     }
 }

@@ -1,11 +1,10 @@
+
 package com.flashsale.redis;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
-
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -26,32 +25,46 @@ class RedisStockReservationServiceTest {
     void shouldReturnTrueWhenStockIsReserved() {
         when(redisTemplate.execute(
                 any(DefaultRedisScript.class),
-                anyList()
+                anyList(),
+                any(Object[].class)
         )).thenReturn(1L);
 
-        assertTrue(reservationService.reserveStock(1L));
+        assertTrue(reservationService.reserveStock(1L, "reservation-1"));
     }
 
     @Test
     void shouldReturnFalseWhenStockIsExhausted() {
         when(redisTemplate.execute(
                 any(DefaultRedisScript.class),
-                anyList()
+                anyList(),
+                any(Object[].class)
         )).thenReturn(0L);
 
-        assertFalse(reservationService.reserveStock(1L));
+        assertFalse(reservationService.reserveStock(1L, "reservation-2"));
+    }
+
+    @Test
+    void shouldReturnTrueWhenReservationAlreadyExists() {
+        when(redisTemplate.execute(
+                any(DefaultRedisScript.class),
+                anyList(),
+                any(Object[].class)
+        )).thenReturn(2L);
+
+        assertTrue(reservationService.reserveStock(1L, "reservation-1"));
     }
 
     @Test
     void shouldThrowWhenStockIsNotInitialized() {
         when(redisTemplate.execute(
                 any(DefaultRedisScript.class),
-                anyList()
+                anyList(),
+                any(Object[].class)
         )).thenReturn(-1L);
 
         assertThrows(
                 IllegalStateException.class,
-                () -> reservationService.reserveStock(1L)
+                () -> reservationService.reserveStock(1L, "reservation-3")
         );
     }
 }
