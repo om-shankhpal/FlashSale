@@ -1,0 +1,162 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#11150f" />
+  <title>FLASHSALE.exe — Limited Stock Terminal</title>
+  <link rel="stylesheet" href="/style.css" />
+  <script src="/script.js" defer></script>
+</head>
+<body>
+<div class="scanlines" aria-hidden="true"></div>
+<main class="shell">
+  <header class="topbar">
+    <a class="brand" href="/"><span class="brand-mark">F_</span> FLASHSALE<span class="muted">.exe</span></a>
+    <div class="system-status"><span class="status-dot"></span> SYSTEM ONLINE</div>
+  </header>
+
+  <section class="hero">
+    <p class="eyebrow">/// LIMITED INVENTORY PROTOCOL</p>
+    <h1>LIMITED STOCK.<br /><span>MAXIMUM CHAOS.</span></h1>
+    <p class="hero-copy">One item. A ticking clock. Every reservation counts.</p>
+    <div class="hero-meta">
+      <span><b>LIVE</b> PRODUCT DATA</span>
+      <span><b>API</b> CONNECTED</span>
+      <span><b>DB</b> POSTGRESQL</span>
+    </div>
+  </section>
+
+  <section class="side-panel admin-panel">
+    <div class="panel-heading">
+      <span>ADMIN / CREATE SALE</span>
+      <span class="tag">MANAGEMENT</span>
+    </div>
+    <p class="side-message">Create a product and configure its sale window.</p>
+
+    <form id="createSaleForm" class="sale-form">
+      <label>PRODUCT NAME
+        <input name="name" required maxlength="150" placeholder="e.g. Goku Action Figure" />
+      </label>
+
+      <div class="form-grid">
+        <label>PRICE (INR)
+          <input name="price" type="number" min="0.01" step="0.01" required placeholder="4999" />
+        </label>
+        <label>AVAILABLE STOCK
+          <input name="stock" type="number" min="0" step="1" required placeholder="20" />
+        </label>
+      </div>
+
+      <div class="form-grid">
+        <label>SALE STARTS
+          <input name="saleStartsAt" type="datetime-local" required />
+        </label>
+        <label>SALE ENDS
+          <input name="saleEndsAt" type="datetime-local" required />
+        </label>
+      </div>
+
+      <button id="createSaleButton" class="reserve-button" type="submit">
+        + CREATE SALE
+      </button>
+      <p id="createSaleMessage" class="form-message" role="status"></p>
+    </form>
+  </section>
+
+  <section class="sale-layout" aria-label="Flash sale">
+    <article class="product-panel">
+      <div class="panel-heading">
+        <span>FEATURED DROP / <span id="productIdLabel">---</span></span>
+        <span id="saleStatus" class="tag">LOADING...</span>
+      </div>
+
+      <div class="product-art" aria-label="Pixel art game console illustration">
+        <div class="art-grid"></div>
+        <div class="console">
+          <div class="console-top"><span></span><span></span><span></span></div>
+          <div class="console-screen">
+            <div class="screen-star">✦</div>
+            <div class="screen-text">PLAY<br />FOREVER</div>
+          </div>
+          <div class="console-controls">
+            <div class="dpad"><i></i><b></b></div>
+            <div class="buttons"><i></i><b></b></div>
+          </div>
+        </div>
+        <span class="art-label">LIMITED / SERIES 01</span>
+        <span class="art-coordinate">FLASHSALE</span>
+      </div>
+
+      <div class="product-details">
+        <div>
+          <p class="eyebrow">FEATURED PRODUCT</p>
+          <h2 id="productName">Loading products...</h2>
+          <p class="product-desc" id="productDescription">Connected to your inventory.</p>
+        </div>
+        <div class="price" id="productPrice">₹---</div>
+      </div>
+
+      <div class="product-picker">
+        <label for="productSelect">SELECT PRODUCT</label>
+        <select id="productSelect">
+          <option value="">Loading products...</option>
+        </select>
+      </div>
+
+      <div class="stock-row">
+        <span>INVENTORY LEVEL</span>
+        <strong id="stockLabel">---</strong>
+      </div>
+      <div class="stock-track"><div id="stockBar" class="stock-fill"></div></div>
+
+      <div class="sale-footer">
+        <div class="countdown-block">
+          <span class="eyebrow" id="countdownLabel">SALE STATUS</span>
+          <strong id="countdown">--:--</strong>
+        </div>
+        <button id="reserveButton" class="reserve-button" type="button" disabled>
+          ▸ RESERVE ITEM
+        </button>
+      </div>
+
+      <p class="demo-note">LIVE API — reservations processed by Spring Boot.</p>
+    </article>
+
+    <aside class="side-column">
+      <section class="side-panel">
+        <div class="panel-heading">
+          <span>DROP STATUS</span>
+          <span class="pulse">● LIVE</span>
+        </div>
+        <div class="stat"><span>PRODUCT ID</span><strong id="sideProductId">---</strong></div>
+        <div class="stat"><span>INITIAL STOCK</span><strong id="initialStock">---</strong></div>
+        <div class="stat"><span>SALE PRICE</span><strong id="sidePrice">₹---</strong></div>
+        <div class="stat"><span>RESERVATIONS</span><strong id="reservedCount">000</strong></div>
+        <div class="side-divider"></div>
+        <p class="side-message">
+          <span class="prompt">&gt;_</span>
+          A reservation is recorded only after the backend confirms it.
+        </p>
+      </section>
+
+      <section class="side-panel terminal">
+        <div class="panel-heading">
+          <span>ACTIVITY.LOG</span><span class="terminal-live">● REC</span>
+        </div>
+        <div id="activityLog" class="log-lines" aria-live="polite">
+          <p><time>--:--:--</time><span class="log-info">[INFO]</span> Initializing terminal...</p>
+        </div>
+      </section>
+    </aside>
+  </section>
+
+  <footer class="footer">
+    <span>FLASHSALE // CONCURRENCY LAB</span>
+    <span>POWERED BY SPRING BOOT <b>◆</b></span>
+    <span>BUILD 0.2.0</span>
+  </footer>
+</main>
+</body>
+</html>
