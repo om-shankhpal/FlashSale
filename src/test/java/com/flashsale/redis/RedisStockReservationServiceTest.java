@@ -81,4 +81,30 @@ class RedisStockReservationServiceTest {
                 () -> reservationService.reserveStock(1L, "reservation-1")
         );
     }
+
+    @Test
+    void shouldThrowWhenRedisStockValueIsInvalid() {
+        when(redisTemplate.execute(
+                any(DefaultRedisScript.class),
+                anyList(),
+                any(Object[].class)
+        )).thenReturn(-3L);
+
+        assertThrows(
+                IllegalStateException.class,
+                () -> reservationService.reserveStock(1L, "reservation-4")
+        );
+    }
+
+    @Test
+    void shouldThrowWhenReservationIdExceedsMaximumLength() {
+        String reservationId = "a".repeat(201);
+
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> reservationService.reserveStock(1L, reservationId)
+        );
+
+        verifyNoInteractions(redisTemplate);
+    }
 }

@@ -1,3 +1,4 @@
+
 package com.flashsale;
 
 import com.flashsale.entity.Order;
@@ -12,14 +13,13 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import com.flashsale.redis.RedisStockInitializationService;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
@@ -31,7 +31,6 @@ class PurchaseServiceTest {
     private EntityManager entityManager;
     private Query lockQuery;
     private PurchaseService purchaseService;
-    private RedisStockInitializationService redisStockInitializationService;
 
     @BeforeEach
     void setUp() {
@@ -39,11 +38,7 @@ class PurchaseServiceTest {
         orderRepository = mock(OrderRepository.class);
         entityManager = mock(EntityManager.class);
         lockQuery = mock(Query.class);
-        redisStockInitializationService =
-                mock(RedisStockInitializationService.class);
 
-        when(redisStockInitializationService.isStockAvailable(1L))
-                .thenReturn(true);
         when(entityManager.createNativeQuery(anyString()))
                 .thenReturn(lockQuery);
         when(lockQuery.setParameter(anyString(), any()))
@@ -64,8 +59,7 @@ class PurchaseServiceTest {
         purchaseService = new PurchaseService(
                 productRepository,
                 orderRepository,
-                entityManager,
-                redisStockInitializationService
+                entityManager
         );
     }
 
@@ -124,7 +118,6 @@ class PurchaseServiceTest {
         verify(orderRepository, never()).save(any(Order.class));
     }
 
-
     @Test
     void shouldRejectPurchaseBeforeSaleStarts() {
         Product product = new Product();
@@ -147,7 +140,6 @@ class PurchaseServiceTest {
         verify(productRepository, never()).decreaseStock(any());
         verify(orderRepository, never()).save(any(Order.class));
     }
-
 
     @Test
     void shouldRejectPurchaseAfterSaleEnds() {
@@ -176,10 +168,8 @@ class PurchaseServiceTest {
     void shouldSetReservationExpiryFiveMinutesAhead() {
         when(orderRepository.findByIdempotencyKey("expiry-key"))
                 .thenReturn(Optional.empty());
-
         when(productRepository.decreaseStock(1L))
                 .thenReturn(1);
-
         when(orderRepository.save(any(Order.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -190,7 +180,6 @@ class PurchaseServiceTest {
         LocalDateTime afterPurchase = LocalDateTime.now();
 
         assertNotNull(result.getReservationExpiresAt());
-
         assertEquals(
                 true,
                 !result.getReservationExpiresAt()
@@ -198,22 +187,5 @@ class PurchaseServiceTest {
                         && !result.getReservationExpiresAt()
                         .isAfter(afterPurchase.plusMinutes(5))
         );
-    }
-
-    @Test
-    void shouldRejectPurchaseWhenRedisReportsNoStock() {
-        when(orderRepository.findByIdempotencyKey("redis-out-key"))
-                .thenReturn(Optional.empty());
-
-        when(redisStockInitializationService.isStockAvailable(1L))
-                .thenReturn(false);
-
-        assertThrows(
-                OutOfStockException.class,
-                () -> purchaseService.purchase(1L, "redis-out-key")
-        );
-
-        verify(productRepository, never()).decreaseStock(any());
-        verify(orderRepository, never()).save(any(Order.class));
     }
 }

@@ -42,6 +42,12 @@ public class RedisStockReservationService {
             );
         }
 
+        if (reservationId.length() > 200) {
+            throw new IllegalArgumentException(
+                    "Reservation ID must not exceed 200 characters"
+            );
+        }
+
         String stockKey = STOCK_KEY_PREFIX + productId;
         String reservationKey =
                 RESERVATION_KEY_PREFIX + reservationId;
@@ -68,6 +74,10 @@ public class RedisStockReservationService {
             );
             case -2 -> throw new IllegalStateException(
                     "Reservation ID is already associated with another product"
+            );
+            case -3 -> throw new IllegalStateException(
+                    "Redis stock contains an invalid value for product "
+                            + productId
             );
             default -> throw new IllegalStateException(
                     "Unexpected Redis reservation result: " + result

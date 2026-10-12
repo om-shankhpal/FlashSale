@@ -1,3 +1,4 @@
+
 package com.flashsale.service;
 
 import com.flashsale.entity.Order;
@@ -10,7 +11,6 @@ import com.flashsale.repository.ProductRepository;
 import jakarta.persistence.EntityManager;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.flashsale.redis.RedisStockInitializationService;
 
 import java.time.LocalDateTime;
 
@@ -20,17 +20,14 @@ public class PurchaseService {
     private final ProductRepository productRepository;
     private final OrderRepository orderRepository;
     private final EntityManager entityManager;
-    private final RedisStockInitializationService redisStockInitializationService;
 
     public PurchaseService(
             ProductRepository productRepository,
             OrderRepository orderRepository,
-            EntityManager entityManager,
-            RedisStockInitializationService redisStockInitializationService) {
+            EntityManager entityManager) {
         this.productRepository = productRepository;
         this.orderRepository = orderRepository;
         this.entityManager = entityManager;
-        this.redisStockInitializationService = redisStockInitializationService;
     }
 
     @Transactional
@@ -63,10 +60,6 @@ public class PurchaseService {
                     "The sale is not currently active");
         }
 
-        if (!redisStockInitializationService.isStockAvailable(productId)) {
-            throw new OutOfStockException("Product is out of stock");
-        }
-
         int updatedRows = productRepository.decreaseStock(productId);
 
         if (updatedRows == 0) {
@@ -78,9 +71,7 @@ public class PurchaseService {
         order.setProductId(productId);
         order.setIdempotencyKey(idempotencyKey);
         order.setStatus(OrderStatus.PENDING_PAYMENT);
-        order.setReservationExpiresAt(
-                LocalDateTime.now().plusMinutes(5)
-        );
+        order.setReservationExpiresAt(now.plusMinutes(5));
 
         return orderRepository.save(order);
     }
