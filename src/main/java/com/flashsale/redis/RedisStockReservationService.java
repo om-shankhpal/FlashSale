@@ -52,4 +52,10 @@ public class RedisStockReservationService {
             );
         };
     }
+
+    public void restoreStock(Long productId) {
+        String stockKey = STOCK_KEY_PREFIX + productId;
+
+        redisTemplate.opsForValue().increment(stockKey);
+    }
 }

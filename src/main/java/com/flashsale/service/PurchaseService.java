@@ -10,6 +10,7 @@ import com.flashsale.repository.ProductRepository;
 import jakarta.persistence.EntityManager;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.flashsale.redis.RedisStockReservationService;
 
 import java.time.LocalDateTime;
 
@@ -19,14 +20,17 @@ public class PurchaseService {
     private final ProductRepository productRepository;
     private final OrderRepository orderRepository;
     private final EntityManager entityManager;
+    private final RedisStockReservationService redisStockReservationService;
 
     public PurchaseService(
             ProductRepository productRepository,
             OrderRepository orderRepository,
-            EntityManager entityManager) {
+            EntityManager entityManager,
+            RedisStockReservationService redisStockReservationService) {
         this.productRepository = productRepository;
         this.orderRepository = orderRepository;
         this.entityManager = entityManager;
+        this.redisStockReservationService = redisStockReservationService;
     }
 
     @Transactional
